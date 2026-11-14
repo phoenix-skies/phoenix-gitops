@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phoenix-frontend
+  labels: { app.kubernetes.io/name: phoenix-frontend, app.kubernetes.io/part-of: phoenix }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: phoenix-frontend }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: phoenix-frontend, app.kubernetes.io/part-of: phoenix }
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/phoenix-skies/phoenix-frontend:latest
+          ports: [{ name: http, containerPort: 8080 }]
+          env:
+            - { name: API_UPSTREAM, value: "phoenix-backend:8080" }
+          readinessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10 }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+          securityContext: { allowPrivilegeEscalation: false }

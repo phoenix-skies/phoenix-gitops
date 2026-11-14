@@ -1,0 +1,70 @@
+{{- if .Values.database.sealedPassword }}
+# Day 8 — encrypted with the cluster's Sealed Secrets key; safe to commit.
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: phoenix-db
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+spec:
+  encryptedData:
+    password: {{ .Values.database.sealedPassword }}
+  template:
+    metadata:
+      name: phoenix-db
+{{- else }}
+# WARNING: plain Secret for local/kind use only. Seal it before using QA/prod.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: phoenix-db
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  password: {{ .Values.database.devPassword | quote }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: phoenix-db
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/name: phoenix-db
+spec:
+  serviceName: phoenix-db
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: phoenix-db }
+  template:
+    metadata:
+      labels: {{- include "phoenix.labels" . | nindent 8 }}
+        app.kubernetes.io/name: phoenix-db
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.database.image }}
+          ports: [{ name: pg, containerPort: 5432 }]
+          env:
+            - { name: POSTGRES_DB, value: phoenix }
+            - { name: POSTGRES_USER, value: phoenix }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: phoenix-db, key: password } }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          readinessProbe: { exec: { command: ["pg_isready", "-U", "phoenix"] }, periodSeconds: 5 }
+          resources: {{- toYaml .Values.database.resources | nindent 12 }}
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: { requests: { storage: {{ .Values.database.storage }} } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phoenix-db
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/name: phoenix-db
+spec:
+  clusterIP: None
+  selector: { app.kubernetes.io/name: phoenix-db }
+  ports: [{ name: pg, port: 5432, targetPort: pg }]

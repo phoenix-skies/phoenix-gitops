@@ -1,0 +1,8 @@
+apiVersion: v2
+name: phoenix
+description: Project Phoenix e-commerce platform (storefront, product API, PostgreSQL) — GitOps Mastery
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: DataQuaint Platform Team

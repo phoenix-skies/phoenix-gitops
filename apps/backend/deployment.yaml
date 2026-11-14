@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phoenix-backend
+  labels: { app.kubernetes.io/name: phoenix-backend, app.kubernetes.io/part-of: phoenix }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: phoenix-backend }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: phoenix-backend, app.kubernetes.io/part-of: phoenix }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 10001 }
+      containers:
+        - name: api
+          image: ghcr.io/phoenix-skies/phoenix-backend:latest
+          ports: [{ name: http, containerPort: 8080 }]
+          envFrom:
+            - configMapRef: { name: phoenix-backend-config }
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: phoenix-db, key: password } }
+            - name: DATABASE_URL
+              value: postgresql://phoenix:$(DB_PASSWORD)@phoenix-db:5432/phoenix
+          readinessProbe: { httpGet: { path: /readyz, port: http }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10 }
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { cpu: 250m, memory: 256Mi }
+          securityContext: { allowPrivilegeEscalation: false }

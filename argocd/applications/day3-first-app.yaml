@@ -1,0 +1,22 @@
+# Day 3 — first GitOps deployment. MANUAL sync on purpose: click SYNC in the UI or
+#   argocd app sync phoenix-first
+# Day 4 — uncomment syncPolicy.automated and watch drift get corrected.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phoenix-first
+  namespace: argocd
+spec:
+  project: phoenix
+  source:
+    repoURL: https://github.com/phoenix-skies/phoenix-gitops.git
+    targetRevision: main
+    path: environments/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: phoenix-kz-dev
+  syncPolicy:
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+    syncOptions: [CreateNamespace=true]

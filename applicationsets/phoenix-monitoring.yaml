@@ -1,0 +1,17 @@
+# Day 9 — Grafana dashboard delivered by GitOps too.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phoenix-monitoring
+  namespace: argocd
+spec:
+  project: phoenix
+  source:
+    repoURL: https://github.com/phoenix-skies/phoenix-gitops.git
+    targetRevision: main
+    path: monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }

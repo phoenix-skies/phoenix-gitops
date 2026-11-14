@@ -1,0 +1,11 @@
+# QA — promoted from dev by PR (promote workflow). Auto-sync.
+environment: qa
+frontend:
+  replicas: 2
+  image: { tag: latest }
+backend:
+  replicas: 2
+  image: { tag: latest }
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 384Mi }

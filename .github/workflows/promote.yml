@@ -1,0 +1,51 @@
+# Promotion is a reviewed Git change (Day 5/7/8):  dev -> qa  or  qa -> prod
+# Actions tab -> promote -> Run workflow. Opens a PR; prod PRs need CODEOWNERS approval.
+name: promote
+on:
+  workflow_dispatch:
+    inputs:
+      from: { description: "Source environment", type: choice, options: [dev, qa], default: dev }
+      to:   { description: "Target environment", type: choice, options: [qa, prod], default: qa }
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Guard promotion path
+        run: |
+          case "${{ inputs.from }}->${{ inputs.to }}" in
+            dev-\>qa|qa-\>prod) ;;
+            *) echo "Only dev->qa and qa->prod are allowed"; exit 1 ;;
+          esac
+      - name: Copy image references
+        id: copy
+        run: |
+          src=helm/phoenix/values-${{ inputs.from }}.yaml
+          dst=helm/phoenix/values-${{ inputs.to }}.yaml
+          be=$(yq '.backend.image.tag' $src); fe=$(yq '.frontend.image.tag' $src)
+          BE=$be FE=$fe yq -i '.backend.image.tag = strenv(BE) | .frontend.image.tag = strenv(FE)' $dst
+          # keep the Kustomize track in step
+          for img in phoenix-backend phoenix-frontend; do
+            tag=$(yq "(.images[] | select(.name == \"*$img\")).newTag" environments/${{ inputs.from }}/kustomization.yaml)
+            TAG=$tag yq -i "(.images[] | select(.name == \"*$img\")).newTag = strenv(TAG)" environments/${{ inputs.to }}/kustomization.yaml
+          done
+          echo "be=$be" >> $GITHUB_OUTPUT; echo "fe=$fe" >> $GITHUB_OUTPUT
+          git diff
+      - name: Open PR
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: |
+          branch="promote/${{ inputs.to }}-${GITHUB_RUN_NUMBER}"
+          git config user.name "phoenix-release-bot"; git config user.email "release-bot@users.noreply.github.com"
+          git checkout -b "$branch"; git commit -am "promote(${{ inputs.to }}): from ${{ inputs.from }}"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "promote(${{ inputs.to }}): backend ${{ steps.copy.outputs.be }}" \
+            --body "Promotes the images currently running in **${{ inputs.from }}** to **${{ inputs.to }}**.
+
+          - backend: \`${{ steps.copy.outputs.be }}\`
+          - frontend: \`${{ steps.copy.outputs.fe }}\`
+
+          Requested by @${{ github.actor }}. ${{ inputs.to == 'prod' && 'Needs CODEOWNERS approval. After merging, a release manager syncs **phoenix-prod** in Argo CD.' || 'Argo CD auto-syncs QA after merge.' }}"

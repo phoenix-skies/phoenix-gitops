@@ -1,0 +1,19 @@
+# Day 4/5 — Kustomize track, prod
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phoenix-kz-prod
+  namespace: argocd
+  labels: { phoenix.dataquaint.com/track: kustomize, phoenix.dataquaint.com/env: prod }
+spec:
+  project: phoenix
+  source:
+    repoURL: https://github.com/phoenix-skies/phoenix-gitops.git
+    targetRevision: main
+    path: environments/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: phoenix-kz-prod
+  syncPolicy:
+  # prod: manual sync — a release manager clicks SYNC after the PR is approved
+    syncOptions: [CreateNamespace=true]

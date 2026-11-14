@@ -1,0 +1,26 @@
+{{- if .Values.backend.rollout.enabled }}
+# Day 9 — the canary is judged only on ITS OWN pods (matched by pod-template-hash).
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: phoenix-error-rate
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+spec:
+  args:
+    - name: canary-hash
+      valueFrom:
+        podTemplateHashValue: Latest
+  metrics:
+    - name: canary-5xx-ratio
+      interval: {{ .Values.backend.analysis.interval }}
+      count: {{ .Values.backend.analysis.count }}
+      failureLimit: {{ .Values.backend.analysis.failureLimit }}
+      successCondition: "isNaN(result[0]) || result[0] <= {{ .Values.backend.analysis.maxErrorRate }}"
+      provider:
+        prometheus:
+          address: {{ .Values.backend.analysis.prometheusAddress }}
+          query: |
+            sum(rate(phoenix_http_requests_total{namespace="{{ .Release.Namespace }}",status=~"5..",rollouts_pod_template_hash="{{ "{{" }}args.canary-hash{{ "}}" }}"}[1m]))
+            /
+            sum(rate(phoenix_http_requests_total{namespace="{{ .Release.Namespace }}",rollouts_pod_template_hash="{{ "{{" }}args.canary-hash{{ "}}" }}"}[1m]))
+{{- end }}

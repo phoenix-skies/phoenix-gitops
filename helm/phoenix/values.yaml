@@ -1,0 +1,57 @@
+# Defaults shared by all environments. Per-env overrides live in values-<env>.yaml.
+environment: dev
+
+imageRegistry: ghcr.io/phoenix-skies
+
+frontend:
+  replicas: 1
+  image: { repository: phoenix-frontend, tag: latest, pullPolicy: IfNotPresent }
+  service: { type: LoadBalancer, port: 80 }
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
+
+backend:
+  replicas: 1
+  image: { repository: phoenix-backend, tag: latest, pullPolicy: IfNotPresent }
+  errorRate: "0"          # set to e.g. "0.5" to simulate a bad release (canary demo)
+  resources:
+    requests: { cpu: 50m, memory: 96Mi }
+    limits: { cpu: 250m, memory: 256Mi }
+  # Day 9 — Argo Rollouts. When disabled a plain Deployment is rendered instead.
+  rollout:
+    enabled: true
+    steps:
+      - setWeight: 25
+      - pause: { duration: 30s }
+      - analysis: { templates: [{ templateName: phoenix-error-rate }] }
+      - setWeight: 50
+      - pause: { duration: 30s }
+      - analysis: { templates: [{ templateName: phoenix-error-rate }] }
+      - setWeight: 100
+  analysis:
+    prometheusAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+    maxErrorRate: "0.05"    # canary fails if more than 5% of its requests are 5xx
+    interval: 20s
+    count: 3
+    failureLimit: 1
+
+database:
+  image: postgres:16-alpine
+  storage: 1Gi
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+  # Day 8 — secrets. Put the Sealed Secrets ciphertext here (see phoenix-infra/scripts/seal-db-secret.sh).
+  # If empty, a plain Secret with devPassword is created (local/kind only — never for prod).
+  sealedPassword: ""
+  devPassword: phoenix-dev-only
+
+# Generates steady traffic so Prometheus/Grafana and the canary analysis have data.
+loadgen:
+  enabled: true
+  requestsPerSecond: 5
+
+monitoring:
+  serviceMonitor:
+    enabled: true

@@ -1,0 +1,21 @@
+# Day 4/5 — Kustomize track, qa
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: phoenix-kz-qa
+  namespace: argocd
+  labels: { phoenix.dataquaint.com/track: kustomize, phoenix.dataquaint.com/env: qa }
+spec:
+  project: phoenix
+  source:
+    repoURL: https://github.com/phoenix-skies/phoenix-gitops.git
+    targetRevision: main
+    path: environments/qa
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: phoenix-kz-qa
+  syncPolicy:
+    automated:
+      prune: true      # Day 4 — resources deleted from Git are deleted from the cluster
+      selfHeal: true   # Day 4 — manual kubectl changes are reverted
+    syncOptions: [CreateNamespace=true]

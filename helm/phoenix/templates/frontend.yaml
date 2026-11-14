@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phoenix-frontend
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/name: phoenix-frontend
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels: { app.kubernetes.io/name: phoenix-frontend }
+  template:
+    metadata:
+      labels: {{- include "phoenix.labels" . | nindent 8 }}
+        app.kubernetes.io/name: phoenix-frontend
+    spec:
+      containers:
+        - name: web
+          image: {{ include "phoenix.image" (dict "root" . "img" .Values.frontend.image) }}
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports: [{ name: http, containerPort: 8080 }]
+          env:
+            - { name: API_UPSTREAM, value: "phoenix-backend:8080" }
+          readinessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10 }
+          resources: {{- toYaml .Values.frontend.resources | nindent 12 }}
+          securityContext: { allowPrivilegeEscalation: false }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phoenix-frontend
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/name: phoenix-frontend
+spec:
+  type: {{ .Values.frontend.service.type }}
+  selector: { app.kubernetes.io/name: phoenix-frontend }
+  ports: [{ name: http, port: {{ .Values.frontend.service.port }}, targetPort: http }]

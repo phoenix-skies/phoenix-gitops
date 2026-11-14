@@ -1,0 +1,31 @@
+# Day 8 — Argo CD RBAC (applied by phoenix-infra/scripts/03-argocd-access.sh)
+#   student          : can view everything in the phoenix project, can sync dev only
+#   release-manager  : can sync dev, qa and prod; cannot delete apps or change projects
+#   default          : no access
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: argocd }
+data:
+  policy.default: role:none
+  policy.csv: |
+    p, role:none, *, *, */*, deny
+
+    p, role:student, applications, get, phoenix/*, allow
+    p, role:student, applications, sync, phoenix/phoenix-dev, allow
+    p, role:student, applications, sync, phoenix/phoenix-kz-dev, allow
+    p, role:student, logs, get, phoenix/*, allow
+    p, role:student, projects, get, phoenix, allow
+    p, role:student, repositories, get, *, allow
+
+    p, role:release-manager, applications, get, phoenix/*, allow
+    p, role:release-manager, applications, sync, phoenix/*, allow
+    p, role:release-manager, applications, action/*, phoenix/*, allow
+    p, role:release-manager, logs, get, phoenix/*, allow
+    p, role:release-manager, projects, get, phoenix, allow
+
+    g, student, role:student
+    g, release-manager, role:release-manager
+  scopes: "[groups]"

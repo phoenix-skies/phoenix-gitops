@@ -1,0 +1,4 @@
+# Local Argo CD users for the RBAC demo. Merged into argocd-cm by 03-argocd-access.sh
+data:
+  accounts.student: login
+  accounts.release-manager: login
