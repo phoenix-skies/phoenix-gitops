@@ -1,0 +1,17 @@
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: phoenix-backend
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/name: phoenix-backend }
+  # copies the Rollouts hash onto every series -> lets analysis isolate the canary
+  podTargetLabels: [rollouts-pod-template-hash]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+{{- end }}

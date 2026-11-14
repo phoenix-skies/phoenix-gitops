@@ -1,0 +1,6 @@
+# Day 8 — production desired state needs the tech lead's review.
+# Enable "Require review from Code Owners" in the main branch protection rule.
+/helm/phoenix/values-prod.yaml   @phoenix-skies/release-managers
+/environments/prod/              @phoenix-skies/release-managers
+/argocd/                         @phoenix-skies/release-managers
+/applicationsets/                @phoenix-skies/release-managers

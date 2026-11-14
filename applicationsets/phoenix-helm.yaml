@@ -1,0 +1,42 @@
+# Day 6 — ApplicationSet: ONE definition generates phoenix-dev, phoenix-qa, phoenix-prod
+# from the Helm chart + the matching values-<env>.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: phoenix
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - { env: dev,  autoSync: true }
+          - { env: qa,   autoSync: true }
+          - { env: prod, autoSync: false }
+  template:
+    metadata:
+      name: "phoenix-{{.env}}"
+      labels: { phoenix.dataquaint.com/track: helm, phoenix.dataquaint.com/env: "{{.env}}" }
+    spec:
+      project: phoenix
+      source:
+        repoURL: https://github.com/phoenix-skies/phoenix-gitops.git
+        targetRevision: main
+        path: helm/phoenix
+        helm:
+          releaseName: phoenix
+          valueFiles: [values.yaml, "values-{{.env}}.yaml"]
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "phoenix-{{.env}}"
+      syncPolicy:
+        syncOptions: [CreateNamespace=true]
+  templatePatch: |
+    {{- if .autoSync }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+    {{- end }}

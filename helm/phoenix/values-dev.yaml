@@ -1,0 +1,8 @@
+# DEV — updated automatically by phoenix-app CI (via PR). Auto-sync + self-heal.
+environment: dev
+frontend:
+  image: { tag: latest }
+backend:
+  replicas: 1
+  errorRate: "0"
+  image: { tag: latest }

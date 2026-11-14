@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phoenix-backend-config
+data:
+  ERROR_RATE: "0"
+  APP_ENV: "base"

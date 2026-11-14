@@ -1,0 +1,25 @@
+# Day 8 — AppProject: least privilege. Phoenix apps may only come from Phoenix repos,
+# only land in phoenix-* namespaces, and may not create cluster-scoped objects except Namespaces.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: phoenix
+  namespace: argocd
+spec:
+  description: Project Phoenix — e-commerce platform for Phoenix Electronics
+  sourceRepos:
+    - https://github.com/phoenix-skies/phoenix-gitops.git
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: "phoenix-*" }
+    - { server: https://kubernetes.default.svc, namespace: monitoring }
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+  namespaceResourceBlacklist:
+    - { group: "", kind: ResourceQuota }
+    - { group: "", kind: LimitRange }
+    - { group: rbac.authorization.k8s.io, kind: "*" }
+  roles:
+    - name: ci-readonly
+      description: Read-only token for pipelines/dashboards
+      policies:
+        - p, proj:phoenix:ci-readonly, applications, get, phoenix/*, allow

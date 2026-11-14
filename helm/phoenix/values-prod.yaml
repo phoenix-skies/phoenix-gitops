@@ -1,0 +1,15 @@
+# PROD — promoted from qa by PR; needs CODEOWNERS approval. Manual sync in Argo CD.
+environment: prod
+frontend:
+  replicas: 2
+  image: { tag: latest }
+backend:
+  replicas: 4
+  image: { tag: latest }
+  resources:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+database:
+  storage: 5Gi
+loadgen:
+  enabled: false

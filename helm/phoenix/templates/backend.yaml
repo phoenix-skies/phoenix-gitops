@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phoenix-backend-config
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+data:
+  APP_ENV: {{ .Values.environment | quote }}
+---
+{{- if .Values.backend.rollout.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- else }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  name: phoenix-backend
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/name: phoenix-backend
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app.kubernetes.io/name: phoenix-backend }
+  template:
+    metadata:
+      labels: {{- include "phoenix.labels" . | nindent 8 }}
+        app.kubernetes.io/name: phoenix-backend
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 10001 }
+      containers:
+        - name: api
+          image: {{ include "phoenix.image" (dict "root" . "img" .Values.backend.image) }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports: [{ name: http, containerPort: 8080 }]
+          envFrom:
+            - configMapRef: { name: phoenix-backend-config }
+          env:
+            # Pod-level (not ConfigMap) so a bad value only reaches the NEW canary pods
+            - name: ERROR_RATE
+              value: {{ .Values.backend.errorRate | quote }}
+            - name: APP_VERSION
+              value: {{ .Values.backend.image.tag | toString | splitList "@" | first | quote }}
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: phoenix-db, key: password } }
+            - name: DATABASE_URL
+              value: postgresql://phoenix:$(DB_PASSWORD)@phoenix-db:5432/phoenix
+          readinessProbe: { httpGet: { path: /readyz, port: http }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10 }
+          resources: {{- toYaml .Values.backend.resources | nindent 12 }}
+          securityContext: { allowPrivilegeEscalation: false }
+  {{- if .Values.backend.rollout.enabled }}
+  strategy:
+    canary:
+      steps: {{- toYaml .Values.backend.rollout.steps | nindent 8 }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phoenix-backend
+  labels: {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/name: phoenix-backend
+spec:
+  selector: { app.kubernetes.io/name: phoenix-backend }
+  ports: [{ name: http, port: 8080, targetPort: http }]

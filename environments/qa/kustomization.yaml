@@ -1,0 +1,30 @@
+# Day 5 — qa overlay
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: phoenix-kz-qa
+resources:
+  - ../base
+  - namespace.yaml
+images:
+  - name: ghcr.io/phoenix-skies/phoenix-backend
+    newTag: latest
+  - name: ghcr.io/phoenix-skies/phoenix-frontend
+    newTag: latest
+replicas:
+  - name: phoenix-backend
+    count: 2
+  - name: phoenix-frontend
+    count: 2
+patches:
+  - target: { kind: ConfigMap, name: phoenix-backend-config }
+    patch: |-
+      - op: replace
+        path: /data/APP_ENV
+        value: qa
+  - target: { kind: Deployment, name: phoenix-backend }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { cpu: 500m, memory: 512Mi }
