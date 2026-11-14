@@ -7,21 +7,21 @@ resources:
   - namespace.yaml
 images:
   - name: ghcr.io/phoenix-skies/phoenix-backend
-    newTag: latest
+    newTag: sha-9c40182
   - name: ghcr.io/phoenix-skies/phoenix-frontend
-    newTag: latest
+    newTag: sha-9c40182
 replicas:
   - name: phoenix-backend
     count: 1
   - name: phoenix-frontend
     count: 1
 patches:
-  - target: { kind: ConfigMap, name: phoenix-backend-config }
+  - target: {kind: ConfigMap, name: phoenix-backend-config}
     patch: |-
       - op: replace
         path: /data/APP_ENV
         value: dev
-  - target: { kind: Deployment, name: phoenix-backend }
+  - target: {kind: Deployment, name: phoenix-backend}
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/resources
