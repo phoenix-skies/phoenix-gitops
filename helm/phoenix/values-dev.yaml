@@ -1,8 +1,8 @@
 # DEV — updated automatically by phoenix-app CI (via PR). Auto-sync + self-heal.
 environment: dev
 frontend:
-  image: { tag: latest }
+  image: {tag: 'sha-9c40182@sha256:50600e1e25506f332c50f03aa1c9c9c4f2797b5e99299fb6eaebc95e761ee714'}
 backend:
   replicas: 1
   errorRate: "0"
-  image: { tag: latest }
+  image: {tag: 'sha-9c40182@sha256:31552e32cb899cd46512c6b782338b646223e03c13444226f1ee8e74e9520b21'}
