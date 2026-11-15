@@ -18,7 +18,7 @@ spec:
         prometheus:
           address: {{ .Values.backend.analysis.prometheusAddress }}
           query: |
-            sum(rate(phoenix_http_requests_total{namespace="{{ .Release.Namespace }}",status=~"5..",rollouts_pod_template_hash="{{ "{{" }}args.canary-hash{{ "}}" }}"}[1m]))
+            (sum(rate(phoenix_http_requests_total{namespace="{{ .Release.Namespace }}",status=~"5..",rollouts_pod_template_hash="{{ "{{" }}args.canary-hash{{ "}}" }}"}[1m])) or vector(0))
             /
-            sum(rate(phoenix_http_requests_total{namespace="{{ .Release.Namespace }}",rollouts_pod_template_hash="{{ "{{" }}args.canary-hash{{ "}}" }}"}[1m]))
+            (sum(rate(phoenix_http_requests_total{namespace="{{ .Release.Namespace }}",rollouts_pod_template_hash="{{ "{{" }}args.canary-hash{{ "}}" }}"}[1m])) or vector(0))
 {{- end }}
